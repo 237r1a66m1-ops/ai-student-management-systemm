@@ -2,4 +2,4 @@ Flask
 Flask-Cors
 scikit-learn
 pandas
-numpypip install -r requirements.txt
+numpy
