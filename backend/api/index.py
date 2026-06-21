@@ -1,93 +1,117 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import os
 import pickle
 import numpy as np
-import os
+import pandas as pd
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
+# --- Vercel Absolute Path Configuration ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "..", "student_model.pkl")
+
+# Load your Decision Tree Machine Learning Model safely
+with open(MODEL_PATH, "rb") as f:
+    model = pickle.load(f)
+
+# --- Initialize Flask Application ---
 app = Flask(__name__)
-CORS(app) # Enable Cross-Origin Resource Sharing for Frontend hosting
+CORS(app)  # Allows your frontend serverless framework to cross-communicate
 
-# In-memory database simulation
-USERS = {"admin@school.com": "password123"}
-STUDENTS = [
-    {"id": 1, "name": "Alice Smith", "attendance": 92, "marks": 88, "assignments": 85, "prediction": "High Performer", "report": ""},
-    {"id": 2, "name": "Bob Jones", "attendance": 74, "marks": 55, "assignments": 60, "prediction": "Average Performer", "report": ""},
-    {"id": 3, "name": "Charlie Brown", "attendance": 52, "marks": 42, "assignments": 45, "prediction": "At Risk", "report": ""}
-]
+# Mock Hardcoded Authentication Database Records
+USERS = {
+    "admin@school.com": "password123",
+    "237r1a66m1@cmrtc.ac.in": "password123"  # Added your college email for demo ease
+}
 
-# Load ML Model safely
-MODEL_PATH = os.path.join(os.path.dirname(__file__), '../student_model.pkl')
-model = None
-if os.path.exists(MODEL_PATH):
-    with open(MODEL_PATH, 'rb') as f:
-        model = pickle.load(f)
+# InMemory Mock App State Storage Database
+STUDENT_DATABASE = []
 
-def get_performance_string(category_code):
-    mapping = {2: "High Performer", 1: "Average Performer", 0: "At Risk"}
-    return mapping.get(category_code, "Unknown")
-
-# Rule-based GenAI engine wrapper simulating LLM logic for quick, dynamic text responses
+# --- Helper Functions ---
 def generate_llm_report(name, attendance, marks, prediction):
-    prompt_summary = f"The student {name} has {attendance}% attendance and an academic score of {marks}%. Our ML model classifies them as: {prediction}."
+    """
+    Simulates a localized Generative AI Response LLM Pipeline.
+    Constructs an analytical feedback report based on student data points.
+    """
+    categories = ["At Risk", "Average", "High Performer"]
+    status = categories[int(prediction)]
     
-    if prediction == "High Performer":
-        return f"{prompt_summary} Exceptional work! Demonstrates consistency across assignments and classes. Recommended to participate in advanced honors programs and peer mentorship."
-    elif prediction == "Average Performer":
-        return f"{prompt_summary} The student shows moderate attendance and average academic performance. Assignment scores are steady, but exam preparation could improve. Recommended to focus on targeted review sessions."
-    else:
-        return f"{prompt_summary} Critical attention required. Low attendance patterns directly correlate with weak test metrics. Immediate academic intervention, mandatory study hours, and parental updates are highly advised."
+    prompt_insight = (
+        f"Automated Diagnostic Insight for Student: {name}. "
+        f"Based on internal metrics, the student maintains an attendance rate of {attendance}% "
+        f"along side an aggregate examination grade score of {marks}%. "
+        f"The predictive framework classifies this user profile status as a: [{status}]. "
+        f"Recommendation Matrix: Continue monitoring metrics and maintain optimized structural learning tracks."
+    )
+    return prompt_insight
+
+
+# --- REST API Endpoint Routing Definitions ---
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    """Base API sanity route requirement for serverless environment discovery."""
+    return jsonify({
+        "status": "online",
+        "message": "AI Student Management System Backend API is active",
+        "active_records": len(STUDENT_DATABASE)
+    }), 200
+
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
+    data = request.get_json() or {}
     email = data.get('email')
     password = data.get('password')
-    if USERS.get(email) == password:
-        return jsonify({"status": "success", "message": "Logged in successfully"}), 200
+    
+    if email in USERS and USERS[email] == password:
+        return jsonify({"status": "success", "message": "Authentication verified"}), 200
     return jsonify({"status": "error", "message": "Invalid credentials"}), 401
+
 
 @app.route('/api/students', methods=['GET', 'POST'])
 def manage_students():
-    if request.method == 'GET':
-        return jsonify(STUDENTS), 200
-    
     if request.method == 'POST':
-        data = request.json
+        data = request.get_json() or {}
         name = data.get('name')
-        attendance = int(data.get('attendance'))
-        marks = int(data.get('marks'))
-        assignments = int(data.get('assignments'))
+        attendance = float(data.get('attendance', 0))
+        marks = float(data.get('marks', 0))
+        assignments = float(data.get('assignments', 0))
         
-        # ML Prediction Engine fallback
-        if model:
-            pred_code = model.predict([[attendance, marks, assignments]])[0]
-            prediction = get_performance_string(pred_code)
-        else:
-            prediction = "Average Performer" # Fallback if model pkl is missing
-            
+        # Format feature row matrix for Machine Learning Classifier
+        features = np.array([[attendance, marks, assignments]])
+        
+        # Predict class category index label (0, 1, or 2)
+        prediction_class = int(model.predict(features)[0])
+        
+        # Build new student record schema mapping
+        student_id = len(STUDENT_DATABASE) + 1
         new_student = {
-            "id": len(STUDENTS) + 1,
+            "id": student_id,
             "name": name,
             "attendance": attendance,
             "marks": marks,
             "assignments": assignments,
-            "prediction": prediction,
+            "prediction": prediction_class,
             "report": ""
         }
-        STUDENTS.append(new_student)
-        return jsonify(new_student), 201
-
-@app.route('/api/students/<int:student_id>/report', methods=['POST'])
-def generate_report(student_id):
-    student = next((s for s in STUDENTS if s['id'] == student_id), None)
-    if not student:
-        return jsonify({"error": "Student not found"}), 404
         
-    # GenAI Feature invocation
-    ai_report = generate_llm_report(student['name'], student['attendance'], student['marks'], student['prediction'])
-    student['report'] = ai_report
-    return jsonify({"status": "success", "report": ai_report}), 200
+        STUDENT_DATABASE.append(new_student)
+        return jsonify({"status": "success", "student": new_student}), 201
+        
+    return jsonify(STUDENT_DATABASE), 200
 
-# Vercel requirements
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+
+@app.route('/api/report/<int:student_id>', methods=['POST'])
+def generate_report(student_id):
+    student = next((s for s in STUDENT_DATABASE if s['id'] == student_id), None)
+    
+    if not student:
+        return jsonify({"status": "error", "message": "Student record not identified"}), 404
+        
+    # Trigger GenAI string composition logic
+    ai_report = generate_llm_report(
+        student['name'], 
+        student['attendance'], 
+        student['marks'], 
+        student['prediction']
