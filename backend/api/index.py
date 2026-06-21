@@ -5,6 +5,10 @@ import pandas as pd
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+# --- FORCE APPS INSTANCE TO THE TOP FOR VERCEL DETECTOR ---
+app = Flask(__name__)
+CORS(app)  # Allows your frontend serverless framework to cross-communicate
+
 # --- Vercel Absolute Path Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "..", "student_model.pkl")
@@ -13,14 +17,10 @@ MODEL_PATH = os.path.join(BASE_DIR, "..", "student_model.pkl")
 with open(MODEL_PATH, "rb") as f:
     model = pickle.load(f)
 
-# --- Initialize Flask Application ---
-app = Flask(__name__)
-CORS(app)  # Allows your frontend serverless framework to cross-communicate
-
 # Mock Hardcoded Authentication Database Records
 USERS = {
     "admin@school.com": "password123",
-    "237r1a66m1@cmrtc.ac.in": "password123"  # Added your college email for demo ease
+    "237r1a66m1@cmrtc.ac.in": "password123"  # Your college email
 }
 
 # InMemory Mock App State Storage Database
@@ -115,3 +115,12 @@ def generate_report(student_id):
         student['attendance'], 
         student['marks'], 
         student['prediction']
+    )
+    
+    student['report'] = ai_report
+    return jsonify({"status": "success", "report": ai_report}), 200
+
+
+# Run handler fallback script hook block
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
