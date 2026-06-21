@@ -1,0 +1,42 @@
+:root {
+    --primary: #ff4500;
+    --dark: #2c3e50;
+    --light: #f8f9fa;
+    --shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--light);
+    margin: 0; padding: 0;
+}
+.hidden { display: none !important; }
+#login-container {
+    width: 100%; max-width: 400px; margin: 100px auto;
+    background: white; padding: 30px; border-radius: 8px; box-shadow: var(--shadow);
+}
+header {
+    background: var(--dark); color: white; padding: 15px 30px;
+    display: flex; justify-content: space-between; align-items: center;
+}
+main { padding: 30px; max-width: 1200px; margin: 0 auto; }
+.card { background: white; padding: 20px; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 20px; }
+input, select {
+    width: 100%; padding: 10px; margin: 10px 0;
+    border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+}
+button {
+    background: var(--primary); color: white; border: none; padding: 10px 20px;
+    border-radius: 4px; cursor: pointer; font-weight: bold;
+}
+button:hover { opacity: 0.9; }
+table {
+    width: 100%; border-collapse: collapse; margin-top: 15px;
+}
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+th { background-color: #f1f1f1; }
+.badge {
+    padding: 5px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold;
+}
+.High { background: #d4edda; color: #155724; }
+.Average { background: #fff3cd; color: #856404; }
+.At { background: #f8d7da; color: #721c24; }

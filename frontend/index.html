@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Student Management Application</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="login-container">
+        <h2 style="color: var(--primary); text-align:center;">School Portal Login</h2>
+        <p style="text-align: center; color: #666; font-size: 0.9em;">Demo: admin@school.com / password123</p>
+        <form id="login-form">
+            <label>Email Address</label>
+            <input type="email" id="email" required placeholder="admin@school.com">
+            <label>Password</label>
+            <input type="password" id="password" required placeholder="••••••••">
+            <button type="submit" style="width:100%;">Sign In</button>
+        </form>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <header>
+            <h2>AI-Enhanced Student Management Panel</h2>
+            <button id="logout-btn" style="background:#555;">Logout</button>
+        </header>
+        
+        <main>
+            <div class="card">
+                <h3>🎒 Register New Student Records & Data Metrics</h3>
+                <form id="student-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+                    <div>
+                        <label>Student Full Name</label>
+                        <input type="text" id="stu-name" required placeholder="e.g. John Doe">
+                    </div>
+                    <div>
+                        <label>Attendance (%)</label>
+                        <input type="number" id="stu-attendance" min="0" max="100" required placeholder="95">
+                    </div>
+                    <div>
+                        <label>Exam Grades / Marks (%)</label>
+                        <input type="number" id="stu-marks" min="0" max="100" required placeholder="82">
+                    </div>
+                    <div>
+                        <label>Assignment Submissions Score (%)</label>
+                        <input type="number" id="stu-assignments" min="0" max="100" required placeholder="88">
+                    </div>
+                    <button type="submit">Add and Predict Performance</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>📊 Academic Rosters & ML Automated Insights</h3>
+                <table id="student-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Attendance</th>
+                            <th>Exam Grade</th>
+                            <th>Assignment Score</th>
+                            <th>ML Performance Category Prediction</th>
+                            <th>Generative AI Reporting Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Adjust endpoint for deployment to Render or Vercel Serverless paths
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://127.0.0.1:5000/api'
+            : 'https://your-backend-url.render.com/api'; // Swap with live URL later
+
+        const loginContainer = document.getElementById('login-container');
+        const appContainer = document.getElementById('app-container');
+
+        // Handle Login Auth Action flow 
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                if(response.ok) {
+                    loginContainer.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+                    loadStudents();
+                } else {
+                    alert(data.message || 'Authentication failed');
+                }
+            } catch (err) {
+                alert('Backend system currently unavailable. Check connections.');
+            }
+        });
+
+        // Logout Hook Routine
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            appContainer.classList.add('hidden');
+            loginContainer.classList.remove('hidden');
+        });
+
+        // Get and Render System Records
+        async function loadStudents() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/students`);
+                const data = await response.json();
+                const tbody = document.querySelector('#student-table tbody');
+                tbody.innerHTML = '';
+
+                data.forEach(student => {
+                    const badgeClass = student.prediction.split(' ')[0]; // Dynamic Styling hook
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${student.id}</td>
+                        <td><strong>${student.name}</strong></td>
+                        <td>${student.attendance}%</td>
+                        <td>${student.marks}%</td>
+                        <td>${student.assignments}%</td>
+                        <td><span class="badge ${badgeClass}">${student.prediction}</span></td>
+                        <td>
+                            <button onclick="generateAIInsight(${student.id})">Generate Report</button>
+                            <div id="report-${student.id}" style="margin-top:8px; font-size:0.85em; color:#555; max-width:300px; font-style:italic;">${student.report || ''}</div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error("Error connecting data schemas:", err);
+            }
+        }
+
+        // Add Record Event Action Submit
+        document.getElementById('student-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('stu-name').value,
+                attendance: document.getElementById('stu-attendance').value,
+                marks: document.getElementById('stu-marks').value,
+                assignments: document.getElementById('stu-assignments').value
+            };
+
+            const response = await fetch(`${API_BASE_URL}/students`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if(response.ok) {
+                document.getElementById('student-form').reset();
+                loadStudents();
+            }
+        });
+
+        // Trigger GenAI Complete Analytics Execution Pipeline
+        async function generateAIInsight(id) {
+            const reportDiv = document.getElementById(`report-${id}`);
+            reportDiv.innerText = "Invoking Generative Model Prompt pipeline...";
+            
+            const response = await fetch(`${API_BASE_URL}/students/${id}/report`, { method: 'POST' });
+            const data = await response.json();
+            
+            if(response.ok) {
+                reportDiv.innerText = data.report;
+            } else {
+                reportDiv.innerText = "Error compilation issues encountered with prompt.";
+            }
+        }
+    </script>
+</body>
+</html>
